@@ -34,6 +34,7 @@ if __name__=='__main__':
     parser.add_argument('--num_checkpoints',  type=int, default = int(1), help='number of checkpoints to store')
     parser.add_argument('--model_file', type=str)
     parser.add_argument('--use_wandb',        action="store_true")
+    parser.add_argument('--disable_backgrounds', action="store_true")
 
     parser.add_argument('--wandb_tags',       type=str, nargs='+')
 
@@ -104,6 +105,7 @@ if __name__=='__main__':
                           random_percent=args.random_percent,
                           step_penalty=args.step_penalty,
                           key_penalty=args.key_penalty,
+                          use_backgrounds=not args.disable_backgrounds,
                           rand_region=args.rand_region)
         venv = VecExtractDictObs(venv, "rgb")
         normalize_rew = hyperparameters.get('normalize_rew', True)
