@@ -11,7 +11,6 @@ from run_utils import run_env
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--exp_name',         type=str, default = 'metrics', help='experiment name')
-    parser.add_argument('--start_level',      type=int, default = int(0), help='start-level for environment')
     parser.add_argument('--device',           type=str, default = 'cpu', required = False, help='whether to use gpu')
     parser.add_argument('--gpu_device',       type=int, default = int(0), required = False, help = 'visible device in CUDA')
     parser.add_argument('--agent_seed',       type=int, default = random.randint(0,999999), help='Seed for pytorch')
