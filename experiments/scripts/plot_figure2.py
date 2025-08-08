@@ -5,13 +5,14 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 import seaborn as sns
+from pathlib import Path
 
 
 def listdir(path):
     return [os.path.join(path, d) for d in os.listdir(path)]
 
 
-def path_to_rand_percent(path):
+def path_to_rand_percent(path: str) -> int:
     """extract integer rand_percent from path info
     path must end with integer rand_percent"""
     out = path[-3:]
@@ -40,24 +41,29 @@ def main(args):
     sns.set()
 
     # Base directory where the output of get-fig2-data.sh is stored
-    results_dir = "experiments/results/"
+    results_dir = Path("experiments/results/").resolve()
 
-    vanilla_coinrun_resdir = os.path.join(results_dir, args.vanilla_resdir)
-    van_df = pd.read_csv(os.path.join(vanilla_coinrun_resdir, "metrics.csv"))
+    # Use the frequency of collecting the invisible coin in the 'vanilla' setting to
+    # decide which levels to filter out.
+    vanilla_coinrun_resdir = results_dir / "test_rand_percent_0"
+    van_df = extract_metrics(vanilla_coinrun_resdir)
     max_collect_freq = 0.1
 
     collect_freqs = list(map(lambda s: seed_collect_freq(s, van_df), range(np.max(van_df['seed']))))
     collect_freqs = np.array(collect_freqs)
     (good_seeds,) = np.nonzero(collect_freqs < max_collect_freq)
 
-    test_rp100_resdir = os.path.join(results_dir, args.test_rp100_resdir)
-    rand_percents = [path_to_rand_percent(file) for file in os.listdir(results_dir) if file.startswith("test_rand")]
+    rand_percents = [path_to_rand_percent(file.name) for file in results_dir.iterdir() if file.name.startswith("test_rand")]
     rand_percents.sort()
-    joint_rp_paths = [os.path.join(results_dir, f"test_rand_percent_{rp}", f"train_rand_percent_{rp}") for rp in rand_percents[:-1]]
+    joint_rp_paths = [results_dir / f"test_rand_percent_{rp}" for rp in rand_percents[:-1]]
 
     # sweep over training rand_percent
-    csv_files = {path_to_rand_percent(path): os.path.join(path, "metrics.csv") for path in listdir(test_rp100_resdir)}
-    dataframes = {k: pd.read_csv(v, on_bad_lines="skip") for k, v in csv_files.items()}
+    # TODO: Re-implement iterating over multiple training rand percentages.
+    # To do this, look into the old version of this script from the git history.
+    test_rp100_resdir = results_dir / "test_rand_percent_100"
+    dataframes = {
+        path_to_rand_percent(test_rp100_resdir.name): extract_metrics(test_rp100_resdir)
+    }
     dataframes = {k: get_good_seed_df(df, good_seeds) for k, df in dataframes.items()}
     reach_end_freqs = {k: np.mean(df["inv_coin_collected"]) for k, df in dataframes.items()}
 
@@ -67,8 +73,9 @@ def main(args):
 
     # sweep over training & test rand_percent jointly
     # measure how often model dies or times out, ie not gets coin
-    csv_files = {path_to_rand_percent(path): os.path.join(path, "metrics.csv") for path in joint_rp_paths}
-    dataframes = {k: pd.read_csv(v) for k, v in csv_files.items()}
+    dataframes = {
+        path_to_rand_percent(path.name): extract_metrics(path) for path in joint_rp_paths
+    }
     dataframes = {k: get_good_seed_df(df, good_seeds) for k, df in dataframes.items()}
     fail_to_get_coin_freq = {k: 1 - np.mean(df["coin_collected"]) for k, df in dataframes.items()}
 
@@ -96,6 +103,28 @@ def main(args):
     plt.legend()
 
     plt.savefig(figpath + "coinrun_freq.pdf")
+
+def extract_metrics(dir: Path) -> pd.DataFrame:
+    """
+    Extract metrics from the vanilla coinrun results directory.
+    """
+    subfolders = [
+        f for f in dir.iterdir() if f.is_dir()
+        ]
+    if len(subfolders) == 0 or len(subfolders) > 1:
+        raise ValueError(f"Expected 1 subfolder in {dir}, got {len(subfolders)}")
+    sub_dir = dir / subfolders[0]
+    
+    csv_files = [f for f in sub_dir.iterdir() if f.suffix == '.csv']
+    if len(csv_files) == 0:
+        raise FileNotFoundError(f"No .csv file found in {sub_dir}")
+    elif len(csv_files) > 1:
+        raise ValueError(
+            f"Expected 1 .csv file in {dir}, found {len(csv_files)}: "
+            f"{csv_files}"
+        )
+    df = pd.read_csv(csv_files[0])
+    return df
 
 
 if __name__ == "__main__":
