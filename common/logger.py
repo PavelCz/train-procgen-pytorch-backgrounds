@@ -44,6 +44,8 @@ class Logger(object):
 
         self.timesteps = 0
         self.num_episodes = 0
+        self.log_interval = 1000000
+        self.next_log_timestep = self.log_interval
 
     def feed(self, rew_batch, done_batch, rew_batch_v=None, done_batch_v=None):
         steps = rew_batch.shape[0]
@@ -64,7 +66,9 @@ class Logger(object):
                 if done_batch[i][j]:
                     self.episode_timeout_buffer.append(1 if j == steps-1 else 0)
                     self.episode_len_buffer.append(len(self.episode_rewards[i]))
+                    # Save returns
                     self.episode_reward_buffer.append(np.sum(self.episode_rewards[i]))
+                    # Reset step rewards
                     self.episode_rewards[i] = []
                     self.num_episodes += 1
                 if valid and done_batch_v[i][j]:
@@ -76,6 +80,13 @@ class Logger(object):
         self.timesteps += (self.n_envs * steps)
 
     def dump(self):
+        if self.timesteps < self.next_log_timestep:
+            return
+        
+        # Update the next log timestep.
+        self.next_log_timestep += self.log_interval
+
+        # Actually log the data.
         wall_time = time.time() - self.start_time
         episode_statistics = self._get_episode_statistics()
         episode_statistics_list = list(episode_statistics.values())
@@ -92,6 +103,15 @@ class Logger(object):
 
         if self.use_wandb:
             wandb.log({k: v for k, v in zip(self.log.columns, log)})
+
+        # Reset the episode buffers.
+        self.episode_timeout_buffer.clear()
+        self.episode_len_buffer.clear()
+        self.episode_reward_buffer.clear()
+
+        self.episode_timeout_buffer_v.clear()
+        self.episode_len_buffer_v.clear()
+        self.episode_reward_buffer_v.clear()
 
     def _get_episode_statistics(self):
         episode_statistics = {}
