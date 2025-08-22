@@ -54,7 +54,7 @@ class PPO(BaseAgent):
         self.normalize_rew = normalize_rew
         self.use_gae = use_gae
         self.log_interval = log_interval
-        self.next_log_timestep = self.log_interval
+        self.next_log_timestep = 0
         self.num_validation_episodes = num_validation_episodes
     def predict(self, obs, hidden_state, done):
         with torch.no_grad():
