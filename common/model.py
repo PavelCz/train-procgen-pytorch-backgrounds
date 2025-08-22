@@ -121,16 +121,16 @@ class DebugModel(nn.Module):
                  in_channels,
                  **kwargs):
         super().__init__()
-        self.block1 = ImpalaBlock(in_channels=in_channels, out_channels=16)
-        self.fc = nn.Linear(in_features=16 * 8 * 8, out_features=256)
-        self.output_dim = 256
+        # self.block1 = ImpalaBlock(in_channels=in_channels, out_channels=2)
+        self.fc = nn.Linear(in_features=4, out_features=2)
+        self.output_dim = 2
     
 
     def forward(self, x):
-        x = self.block1(x)
-        x = nn.ReLU()(x)
+        # x = self.block1(x)
+        # x = nn.ReLU()(x)
         x = Flatten()(x)
-        x = self.fc(x)
+        x = self.fc(x[:, :4])
         x = nn.ReLU()(x)
         return x
 
