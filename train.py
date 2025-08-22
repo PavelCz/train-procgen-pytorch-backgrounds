@@ -1,7 +1,7 @@
 from common.env.procgen_wrappers import *
 from common.logger import Logger
 from common.storage import Storage
-from common.model import NatureModel, ImpalaModel
+from common.model import NatureModel, ImpalaModel, DebugModel
 from common.policy import CategoricalPolicy
 from common import set_global_seeds, set_global_log_levels
 
@@ -47,6 +47,7 @@ if __name__=='__main__':
 
     #multi threading
     parser.add_argument('--num_threads', type=int, default=8)
+    parser.add_argument('--debug', action="store_true")
 
     args = parser.parse_args()
     exp_name = args.exp_name
@@ -173,7 +174,9 @@ if __name__=='__main__':
     action_space = env.action_space
 
     # Model architecture
-    if architecture == 'nature':
+    if args.debug:
+        model = DebugModel(in_channels=in_channels)
+    elif architecture == 'nature':
         model = NatureModel(in_channels=in_channels)
     elif architecture == 'impala':
         model = ImpalaModel(in_channels=in_channels)

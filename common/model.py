@@ -116,6 +116,25 @@ class ImpalaModel(nn.Module):
         return x
 
 
+class DebugModel(nn.Module):
+    def __init__(self,
+                 in_channels,
+                 **kwargs):
+        super().__init__()
+        self.block1 = ImpalaBlock(in_channels=in_channels, out_channels=16)
+        self.fc = nn.Linear(in_features=16 * 8 * 8, out_features=256)
+        self.output_dim = 256
+    
+
+    def forward(self, x):
+        x = self.block1(x)
+        x = nn.ReLU()(x)
+        x = Flatten()(x)
+        x = self.fc(x)
+        x = nn.ReLU()(x)
+        return x
+
+
 class GRU(nn.Module):
     def __init__(self, input_size, hidden_size):
         super(GRU, self).__init__()
