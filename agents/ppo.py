@@ -30,6 +30,8 @@ class PPO(BaseAgent):
                  normalize_adv=True,
                  normalize_rew=True,
                  use_gae=True,
+                 log_interval=1000000,
+                 num_validation_episodes=1024,
                  **kwargs):
 
         super(PPO, self).__init__(env, policy, logger, storage, device,
@@ -51,7 +53,9 @@ class PPO(BaseAgent):
         self.normalize_adv = normalize_adv
         self.normalize_rew = normalize_rew
         self.use_gae = use_gae
-
+        self.log_interval = log_interval
+        self.next_log_timestep = self.log_interval
+        self.num_validation_episodes = num_validation_episodes
     def predict(self, obs, hidden_state, done):
         with torch.no_grad():
             obs = torch.FloatTensor(obs).to(device=self.device)
@@ -156,8 +160,12 @@ class PPO(BaseAgent):
             self.storage.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)
 
             #valid
-            if self.env_valid is not None:
-                for _ in range(self.n_steps):
+            if self.env_valid is not None and self.t > self.next_log_timestep:
+                self.next_log_timestep += self.log_interval
+
+                # Run validation episodes.
+                num_episodes = 0
+                while num_episodes < self.num_validation_episodes:
                     act_v, log_prob_act_v, value_v, next_hidden_state_v = self.predict(obs_v, hidden_state_v, done_v)
                     next_obs_v, rew_v, done_v, info_v = self.env_valid.step(act_v)
                     self.storage_valid.store(obs_v, hidden_state_v, act_v,
@@ -165,6 +173,10 @@ class PPO(BaseAgent):
                                              log_prob_act_v, value_v)
                     obs_v = next_obs_v
                     hidden_state_v = next_hidden_state_v
+
+                    # Count the number of completed episodes.
+                    num_episodes += np.sum(done_v)
+
                 _, _, last_val_v, hidden_state_v = self.predict(obs_v, hidden_state_v, done_v)
                 self.storage_valid.store_last(obs_v, hidden_state_v, last_val_v)
                 self.storage_valid.compute_estimates(self.gamma, self.lmbda, self.use_gae, self.normalize_adv)

@@ -37,7 +37,8 @@ if __name__=='__main__':
     parser.add_argument('--disable_backgrounds', action="store_true")
 
     parser.add_argument('--wandb_tags',       type=str, nargs='+')
-
+    parser.add_argument('--log_interval',     type=int, default=1000000, help='number of timesteps between logging')
+    parser.add_argument('--num_validation_episodes', type=int, default=1024, help='number of validation episodes to run')
 
     parser.add_argument('--random_percent',   type=int, default=0, help='COINRUN: percent of environments in which coin is randomized (only for coinrun)')
     parser.add_argument('--key_penalty',   type=int, default=0, help='HEIST_AISC: Penalty for picking up keys (divided by 10)')
@@ -63,6 +64,7 @@ if __name__=='__main__':
     seed = args.seed
     log_level = args.log_level
     num_checkpoints = args.num_checkpoints
+    num_validation_episodes = args.num_validation_episodes
 
     set_global_seeds(seed)
     set_global_log_levels(log_level)
@@ -161,7 +163,7 @@ if __name__=='__main__':
         cfg.update(hyperparameters)
         wb_resume = "allow" if args.model_file is None else "must"
         wandb.init(project="objective-robustness", config=cfg, tags=args.wandb_tags, resume=wb_resume)
-    logger = Logger(n_envs, logdir, use_wandb=args.use_wandb)
+    logger = Logger(n_envs, logdir, use_wandb=args.use_wandb, log_interval=args.log_interval)
 
     ###########
     ## MODEL ##
@@ -211,6 +213,8 @@ if __name__=='__main__':
                   num_checkpoints,
                   env_valid=env_valid, 
                   storage_valid=storage_valid,  
+                  log_interval=args.log_interval,
+                  num_validation_episodes=num_validation_episodes,
                   **hyperparameters)
     if args.model_file is not None:
         print("Loading agent from %s" % args.model_file)

@@ -11,7 +11,7 @@ except ImportError:
 
 class Logger(object):
 
-    def __init__(self, n_envs, logdir, use_wandb=False):
+    def __init__(self, n_envs, logdir, use_wandb=False, log_interval=1000000):
         self.start_time = time.time()
         self.n_envs = n_envs
         self.logdir = logdir
@@ -44,7 +44,7 @@ class Logger(object):
 
         self.timesteps = 0
         self.num_episodes = 0
-        self.log_interval = 1000000
+        self.log_interval = log_interval
         self.next_log_timestep = self.log_interval
 
     def feed(self, rew_batch, done_batch, rew_batch_v=None, done_batch_v=None):
