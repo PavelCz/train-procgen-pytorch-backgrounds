@@ -107,6 +107,13 @@ class Storage():
                 yield obs_batch, hidden_state_batch, act_batch, done_batch, log_prob_act_batch, value_batch, return_batch, adv_batch
 
     def fetch_log_data(self):
+
+        if len(self.info_batch) == 0:
+            # It is possible that fetch_log_data is called before anything has been 
+            # stored. One reason this might happen is with the validation environment
+            # data, which has a lower frequency of logging.
+            return None, None
+
         if 'env_reward' in self.info_batch[0][0]:
             rew_batch = []
             for step in range(self.num_steps):
