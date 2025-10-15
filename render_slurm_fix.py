@@ -150,21 +150,28 @@ if __name__=='__main__':
     n_envs = 1
 
     def create_venv_render(args, hyperparameters, is_valid=False):
+        # Force num_threads=0 to avoid threading issues on SLURM
+        # This disables internal threading which can hang on some cluster configurations
+        num_threads_safe = 0
+        
         print(f"Creating ProcgenEnv (same method as train.py)...")
         print(f"  num_envs={n_envs}, env_name={args.env_name}, num_levels={0 if is_valid else args.num_levels}")
         print(f"  start_level={0 if is_valid else args.start_level}, distribution_mode={args.distribution_mode}")
-        print(f"  num_threads={args.num_threads}")
+        print(f"  num_threads={num_threads_safe} (forced to 0 for SLURM compatibility)")
+        print(f"  rand_seed={seed}")
         
         # Use ProcgenEnv (like train.py) instead of ProcgenGym3Env directly
         # ProcgenEnv = ProcgenGym3Env + ToBaselinesVecEnv wrapper
-        # CRITICAL: Pass rand_seed explicitly to bypass create_random_seed() which tries to import mpi4py
+        # CRITICAL: 
+        #   - Pass rand_seed explicitly to bypass create_random_seed() which tries to import mpi4py
+        #   - Use num_threads=0 to disable threading which can hang on SLURM
         venv = ProcgenEnv(
             num_envs=n_envs,
             env_name=args.env_name,
             num_levels=0 if is_valid else args.num_levels,
             start_level=0 if is_valid else args.start_level,
             distribution_mode=args.distribution_mode,
-            num_threads=args.num_threads,
+            num_threads=num_threads_safe,
             random_percent=args.random_percent,
             corruption_type=args.corruption_type,
             corruption_severity=int(args.corruption_severity),
