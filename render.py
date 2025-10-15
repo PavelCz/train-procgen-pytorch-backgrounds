@@ -1,29 +1,3 @@
-#!/usr/bin/env python
-"""
-Render script for procgen environments
-IMPORTANT: For SLURM/cluster execution, use render_slurm_fix.py instead
-"""
-import sys
-import os
-
-# SLURM/MPI fix: Block mpi4py before any imports to prevent hangs
-# This must happen before procgen is imported
-print("Applying SLURM/MPI compatibility fixes...")
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
-
-# Remove MPI environment variables that cause hangs
-for key in list(os.environ.keys()):
-    if any(key.startswith(prefix) for prefix in ['OMPI_', 'PMI_', 'MPI_', 'SLURM_MPI', 'I_MPI_']):
-        del os.environ[key]
-
-# Block mpi4py imports
-class BlockMPI:
-    def __getattr__(self, name):
-        raise ImportError("mpi4py is blocked to prevent SLURM hangs")
-sys.modules['mpi4py'] = BlockMPI()
-sys.modules['mpi4py.MPI'] = BlockMPI()
-
 from common.env.procgen_wrappers import *
 from common.logger import Logger
 from common.storage import Storage
@@ -33,7 +7,7 @@ from common import set_global_seeds, set_global_log_levels
 
 from typing import Optional
 
-import time, yaml, argparse
+import os, time, yaml, argparse
 import gym
 from procgen import ProcgenGym3Env
 import random
@@ -128,59 +102,40 @@ if __name__=='__main__':
         render_mode = None
 
     def create_venv_render(args, hyperparameters, is_valid=False):
-        print(f"Creating ProcgenGym3Env with render_mode={render_mode}, num_threads=0...")
-        # Clear MPI environment variables that might cause hangs in SLURM/multiprocessing
-        # Also pass explicit rand_seed to avoid MPI.COMM_WORLD access in procgen
-        # Use num_threads=0 to avoid threading issues on SLURM
-        with clear_mpi_env_vars():
-            venv = ProcgenGym3Env(num=n_envs,
-                              env_name=args.env_name,
-                              num_levels=0 if is_valid else args.num_levels,
-                              start_level=0 if is_valid else args.start_level,
-                              distribution_mode=args.distribution_mode,
-                              num_threads=0,
-                              render_mode=render_mode,
-                              random_percent=args.random_percent,
-                              corruption_type=args.corruption_type,
-                              corruption_severity=int(args.corruption_severity),
-                              continue_after_coin=args.continue_after_coin,
-                              rand_seed=seed,
-                              )
-        print("ProcgenGym3Env created successfully")
+        venv = ProcgenGym3Env(num=n_envs,
+                          env_name=args.env_name,
+                          num_levels=0 if is_valid else args.num_levels,
+                          start_level=0 if is_valid else args.start_level,
+                          distribution_mode=args.distribution_mode,
+                          num_threads=1,
+                          render_mode=render_mode,
+                          random_percent=args.random_percent,
+                          corruption_type=args.corruption_type,
+                          corruption_severity=int(args.corruption_severity),
+                          continue_after_coin=args.continue_after_coin,
+                          )
         info_key = None if args.agent_view else "rgb"
         ob_key = "rgb" if args.agent_view else None
         if not args.noview:
-            print("Adding ViewerWrapper...")
             venv = ViewerWrapper(venv, tps=args.tps, info_key=info_key, ob_key=ob_key) # N.B. this line caused issues for me. I just commented it out, but it's uncommented in the pushed version in case it's just me (Lee).
-            print("ViewerWrapper added")
         if args.vid_dir is not None:
-            print("Adding VideoRecorderWrapper...")
             venv = VideoRecorderWrapper(venv, directory=args.vid_dir,
                                         info_key=info_key, ob_key=ob_key, fps=args.tps)
-            print("VideoRecorderWrapper added")
-        print("Adding ToBaselinesVecEnv...")
         venv = ToBaselinesVecEnv(venv)
-        print("Adding VecExtractDictObs...")
         venv = VecExtractDictObs(venv, "rgb")
         normalize_rew = hyperparameters.get('normalize_rew', True)
         if normalize_rew:
-            print("Adding VecNormalize...")
             venv = VecNormalize(venv, ob=False) # normalizing returns, but not
             #the img frames
-        print("Adding TransposeFrame...")
         venv = TransposeFrame(venv)
-        print("Adding ScaledFloatFrame...")
         venv = ScaledFloatFrame(venv)
-        print("Environment creation complete!")
 
         return venv
     n_steps = hyperparameters.get('n_steps', 256)
 
     #env = create_venv(args, hyperparameters)
     #env_valid = create_venv(args, hyperparameters, is_valid=True)
-    print("About to call create_venv_render...")
     env = create_venv_render(args, hyperparameters, is_valid=True)
-    print("create_venv_render completed successfully!")
 
     ############
     ## LOGGER ##
