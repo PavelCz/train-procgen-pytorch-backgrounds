@@ -225,7 +225,7 @@ def clear_mpi_env_vars():
     """
     removed_environment = {}
     for k, v in list(os.environ.items()):
-        for prefix in ['OMPI_', 'PMI_']:
+        for prefix in ['OMPI_', 'PMI_', 'SLURM_', 'MPI_', 'MPIR_', 'I_MPI_']:
             if k.startswith(prefix):
                 removed_environment[k] = v
                 del os.environ[k]

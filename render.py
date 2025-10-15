@@ -18,6 +18,13 @@ import torchvision as tv
 
 from gym3 import ViewerWrapper, VideoRecorderWrapper, ToBaselinesVecEnv
 
+# Fix multiprocessing issues on SLURM/cluster environments
+import multiprocessing
+try:
+    multiprocessing.set_start_method('spawn', force=True)
+except RuntimeError:
+    pass  # Already set
+
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
