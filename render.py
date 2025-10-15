@@ -1,3 +1,29 @@
+#!/usr/bin/env python
+"""
+Render script for procgen environments
+IMPORTANT: For SLURM/cluster execution, use render_slurm_fix.py instead
+"""
+import sys
+import os
+
+# SLURM/MPI fix: Block mpi4py before any imports to prevent hangs
+# This must happen before procgen is imported
+print("Applying SLURM/MPI compatibility fixes...")
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+
+# Remove MPI environment variables that cause hangs
+for key in list(os.environ.keys()):
+    if any(key.startswith(prefix) for prefix in ['OMPI_', 'PMI_', 'MPI_', 'SLURM_MPI', 'I_MPI_']):
+        del os.environ[key]
+
+# Block mpi4py imports
+class BlockMPI:
+    def __getattr__(self, name):
+        raise ImportError("mpi4py is blocked to prevent SLURM hangs")
+sys.modules['mpi4py'] = BlockMPI()
+sys.modules['mpi4py.MPI'] = BlockMPI()
+
 from common.env.procgen_wrappers import *
 from common.logger import Logger
 from common.storage import Storage
@@ -7,7 +33,7 @@ from common import set_global_seeds, set_global_log_levels
 
 from typing import Optional
 
-import os, time, yaml, argparse
+import time, yaml, argparse
 import gym
 from procgen import ProcgenGym3Env
 import random
