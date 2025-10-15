@@ -5,6 +5,8 @@ from common.model import NatureModel, ImpalaModel
 from common.policy import CategoricalPolicy
 from common import set_global_seeds, set_global_log_levels
 
+from typing import Optional
+
 import os, time, yaml, argparse
 import gym
 from procgen import ProcgenGym3Env
@@ -51,6 +53,7 @@ if __name__=='__main__':
     parser.add_argument('--agent_view', action="store_true", help="see what the agent sees")
     parser.add_argument('--continue_after_coin', action="store_true", help="level doesnt end when agent gets coin")
     parser.add_argument('--noview', action="store_true", help="just take vids")
+    parser.add_argument('--render_mode', type=Optional[str], default="rgb_array", help="render mode")
 
 
 
@@ -101,7 +104,7 @@ if __name__=='__main__':
                           start_level=0 if is_valid else args.start_level,
                           distribution_mode=args.distribution_mode,
                           num_threads=1,
-                          render_mode="rgb_array",
+                          render_mode=args.render_mode,
                           random_percent=args.random_percent,
                           corruption_type=args.corruption_type,
                           corruption_severity=int(args.corruption_severity),
