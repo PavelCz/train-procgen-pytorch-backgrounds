@@ -157,6 +157,7 @@ if __name__=='__main__':
         
         # Use ProcgenEnv (like train.py) instead of ProcgenGym3Env directly
         # ProcgenEnv = ProcgenGym3Env + ToBaselinesVecEnv wrapper
+        # CRITICAL: Pass rand_seed explicitly to bypass create_random_seed() which tries to import mpi4py
         venv = ProcgenEnv(
             num_envs=n_envs,
             env_name=args.env_name,
@@ -165,7 +166,10 @@ if __name__=='__main__':
             distribution_mode=args.distribution_mode,
             num_threads=args.num_threads,
             random_percent=args.random_percent,
+            corruption_type=args.corruption_type,
+            corruption_severity=int(args.corruption_severity),
             continue_after_coin=args.continue_after_coin,
+            rand_seed=seed,  # Explicit seed to avoid mpi4py import
         )
         print("✓ ProcgenEnv created successfully")
         
