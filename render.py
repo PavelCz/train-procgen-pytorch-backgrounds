@@ -102,7 +102,7 @@ if __name__=='__main__':
         render_mode = None
 
     def create_venv_render(args, hyperparameters, is_valid=False):
-        print(f"Creating ProcgenGym3Env with render_mode={render_mode}, num_threads=1...")
+        print(f"Creating ProcgenGym3Env with render_mode={render_mode}")
         # Clear MPI environment variables that might cause hangs in SLURM/multiprocessing
         with clear_mpi_env_vars():
             venv = ProcgenGym3Env(num=n_envs,
@@ -110,7 +110,6 @@ if __name__=='__main__':
                               num_levels=0 if is_valid else args.num_levels,
                               start_level=0 if is_valid else args.start_level,
                               distribution_mode=args.distribution_mode,
-                              num_threads=1,
                               render_mode=render_mode,
                               random_percent=args.random_percent,
                               corruption_type=args.corruption_type,
