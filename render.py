@@ -53,7 +53,7 @@ if __name__=='__main__':
     parser.add_argument('--agent_view', action="store_true", help="see what the agent sees")
     parser.add_argument('--continue_after_coin', action="store_true", help="level doesnt end when agent gets coin")
     parser.add_argument('--noview', action="store_true", help="just take vids")
-    parser.add_argument('--render_mode', type=Optional[str], default="rgb_array", help="render mode")
+    parser.add_argument('--render_mode', type=Optional[str], default="rgb_array", help="render mode, set to 'none' for render mode None")
 
 
 
@@ -97,6 +97,10 @@ if __name__=='__main__':
     print('INITIALIZAING ENVIRONMENTS...')
     n_envs = 1
 
+    render_mode = args.render_mode
+    if render_mode == 'none':
+        render_mode = None
+
     def create_venv_render(args, hyperparameters, is_valid=False):
         venv = ProcgenGym3Env(num=n_envs,
                           env_name=args.env_name,
@@ -104,7 +108,7 @@ if __name__=='__main__':
                           start_level=0 if is_valid else args.start_level,
                           distribution_mode=args.distribution_mode,
                           num_threads=1,
-                          render_mode=args.render_mode,
+                          render_mode=render_mode,
                           random_percent=args.random_percent,
                           corruption_type=args.corruption_type,
                           corruption_severity=int(args.corruption_severity),
