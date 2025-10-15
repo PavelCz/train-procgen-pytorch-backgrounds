@@ -53,7 +53,7 @@ if __name__=='__main__':
     parser.add_argument('--agent_view', action="store_true", help="see what the agent sees")
     parser.add_argument('--continue_after_coin', action="store_true", help="level doesnt end when agent gets coin")
     parser.add_argument('--noview', action="store_true", help="just take vids")
-    parser.add_argument('--render_mode', type=Optional[str], default="rgb_array", help="render mode, set to 'none' for render mode None")
+    parser.add_argument('--render_mode', type=str, default="rgb_array", help="render mode, set to 'none' for render mode None")
 
 
 
