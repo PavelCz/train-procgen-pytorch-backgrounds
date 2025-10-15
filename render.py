@@ -25,6 +25,13 @@ try:
 except RuntimeError:
     pass  # Already set
 
+# Prevent OpenMP/MKL from spawning too many threads in SLURM
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
@@ -122,6 +129,7 @@ if __name__=='__main__':
                               corruption_type=args.corruption_type,
                               corruption_severity=int(args.corruption_severity),
                               continue_after_coin=args.continue_after_coin,
+                              num_threads=1,  # Prevent hanging in SLURM with many CPUs
                               )
         print("ProcgenGym3Env created successfully")
         info_key = None if args.agent_view else "rgb"
