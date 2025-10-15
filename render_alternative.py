@@ -70,6 +70,13 @@ if __name__=='__main__':
     log_level = args.log_level
     num_checkpoints = args.num_checkpoints
 
+    # Clear MPI environment variables before doing anything
+    print("Clearing MPI environment variables...")
+    for k in list(os.environ.keys()):
+        if k.startswith(('OMPI_', 'PMI_', 'MPI_', 'SLURM_MPI')):
+            del os.environ[k]
+            print(f"  Removed {k}")
+
     set_global_seeds(seed)
     set_global_log_levels(log_level)
 
@@ -103,29 +110,27 @@ if __name__=='__main__':
 
     def create_venv_render(args, hyperparameters, is_valid=False):
         print(f"Creating ProcgenGym3Env with render_mode={render_mode}, num_threads=0...")
-        # Clear MPI environment variables that might cause hangs in SLURM/multiprocessing
-        # Also pass explicit rand_seed to avoid MPI.COMM_WORLD access in procgen
+        # Pass explicit rand_seed to avoid MPI.COMM_WORLD access in procgen
         # Use num_threads=0 to avoid threading issues on SLURM
-        with clear_mpi_env_vars():
-            venv = ProcgenGym3Env(num=n_envs,
-                              env_name=args.env_name,
-                              num_levels=0 if is_valid else args.num_levels,
-                              start_level=0 if is_valid else args.start_level,
-                              distribution_mode=args.distribution_mode,
-                              num_threads=0,
-                              render_mode=render_mode,
-                              random_percent=args.random_percent,
-                              corruption_type=args.corruption_type,
-                              corruption_severity=int(args.corruption_severity),
-                              continue_after_coin=args.continue_after_coin,
-                              rand_seed=seed,
-                              )
+        venv = ProcgenGym3Env(num=n_envs,
+                          env_name=args.env_name,
+                          num_levels=0 if is_valid else args.num_levels,
+                          start_level=0 if is_valid else args.start_level,
+                          distribution_mode=args.distribution_mode,
+                          num_threads=0,
+                          render_mode=render_mode,
+                          random_percent=args.random_percent,
+                          corruption_type=args.corruption_type,
+                          corruption_severity=int(args.corruption_severity),
+                          continue_after_coin=args.continue_after_coin,
+                          rand_seed=seed,
+                          )
         print("ProcgenGym3Env created successfully")
         info_key = None if args.agent_view else "rgb"
         ob_key = "rgb" if args.agent_view else None
         if not args.noview:
             print("Adding ViewerWrapper...")
-            venv = ViewerWrapper(venv, tps=args.tps, info_key=info_key, ob_key=ob_key) # N.B. this line caused issues for me. I just commented it out, but it's uncommented in the pushed version in case it's just me (Lee).
+            venv = ViewerWrapper(venv, tps=args.tps, info_key=info_key, ob_key=ob_key)
             print("ViewerWrapper added")
         if args.vid_dir is not None:
             print("Adding VideoRecorderWrapper...")
@@ -343,3 +348,4 @@ if __name__=='__main__':
 
         agent.storage.compute_estimates(agent.gamma, agent.lmbda, agent.use_gae,
                                        agent.normalize_adv)
+
