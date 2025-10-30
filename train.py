@@ -7,7 +7,7 @@ from common import set_global_seeds, set_global_log_levels
 
 import os, time, yaml, argparse
 import gym
-from procgen import ProcgenEnv
+from procgen import ProcgenEnv, RandomEnvSwitchWrapper
 import random
 import torch
 
@@ -44,6 +44,12 @@ if __name__=='__main__':
     parser.add_argument('--key_penalty',   type=int, default=0, help='HEIST_AISC: Penalty for picking up keys (divided by 10)')
     parser.add_argument('--step_penalty',   type=int, default=0, help='HEIST_AISC: Time penalty per step (divided by 1000)')
     parser.add_argument('--rand_region',   type=int, default=0, help='MAZE: size of region (in upper left corner) in which goal is sampled.')
+    
+    # RandomEnvSwitchWrapper options
+    parser.add_argument('--switch_env_names', type=str, nargs='+', default=None, 
+                        help='List of environment names to randomly switch between (requires exactly 2 envs)')
+    parser.add_argument('--switch_percent',   type=int, default=50, 
+                        help='Percentage (0-100) for choosing the first environment in switch_env_names')
 
 
     #multi threading
@@ -99,18 +105,61 @@ if __name__=='__main__':
     n_envs = hyperparameters.get('n_envs', 256)
 
     def create_venv(args, hyperparameters, is_valid=False):
-        venv = ProcgenEnv(num_envs=n_envs,
-                          env_name=val_env_name if is_valid else env_name,
-                          num_levels=0 if is_valid else args.num_levels,
-                          start_level=start_level_val if is_valid else args.start_level,
-                          distribution_mode=args.distribution_mode,
-                          num_threads=args.num_threads,
-                          random_percent=args.random_percent,
-                          step_penalty=args.step_penalty,
-                          key_penalty=args.key_penalty,
-                          use_backgrounds=not args.disable_backgrounds,
-                          rand_region=args.rand_region)
-        venv = VecExtractDictObs(venv, "rgb")
+        # Check if we should use RandomEnvSwitchWrapper
+        if args.switch_env_names is not None and not is_valid:
+            if len(args.switch_env_names) != 2:
+                raise ValueError(f"RandomEnvSwitchWrapper requires exactly 2 environments, got {len(args.switch_env_names)}")
+            
+            if not (0 <= args.switch_percent <= 100):
+                raise ValueError(f"switch_percent must be between 0 and 100, got {args.switch_percent}")
+            
+            print(f"Using RandomEnvSwitchWrapper with environments: {args.switch_env_names}")
+            print(f"Probability split: {args.switch_percent}% for {args.switch_env_names[0]}, {100-args.switch_percent}% for {args.switch_env_names[1]}")
+            
+            # Create two separate ProcgenEnv instances
+            venv1 = ProcgenEnv(num_envs=n_envs,
+                              env_name=args.switch_env_names[0],
+                              num_levels=args.num_levels,
+                              start_level=args.start_level,
+                              distribution_mode=args.distribution_mode,
+                              num_threads=args.num_threads,
+                              random_percent=args.random_percent,
+                              step_penalty=args.step_penalty,
+                              key_penalty=args.key_penalty,
+                              use_backgrounds=not args.disable_backgrounds,
+                              rand_region=args.rand_region)
+            venv1 = VecExtractDictObs(venv1, "rgb")
+            
+            venv2 = ProcgenEnv(num_envs=n_envs,
+                              env_name=args.switch_env_names[1],
+                              num_levels=args.num_levels,
+                              start_level=args.start_level,
+                              distribution_mode=args.distribution_mode,
+                              num_threads=args.num_threads,
+                              random_percent=args.random_percent,
+                              step_penalty=args.step_penalty,
+                              key_penalty=args.key_penalty,
+                              use_backgrounds=not args.disable_backgrounds,
+                              rand_region=args.rand_region)
+            venv2 = VecExtractDictObs(venv2, "rgb")
+            
+            # Wrap with RandomEnvSwitchWrapper
+            venv = RandomEnvSwitchWrapper(venv1, venv2, args.switch_percent)
+        else:
+            # Standard single environment
+            venv = ProcgenEnv(num_envs=n_envs,
+                              env_name=val_env_name if is_valid else env_name,
+                              num_levels=0 if is_valid else args.num_levels,
+                              start_level=start_level_val if is_valid else args.start_level,
+                              distribution_mode=args.distribution_mode,
+                              num_threads=args.num_threads,
+                              random_percent=args.random_percent,
+                              step_penalty=args.step_penalty,
+                              key_penalty=args.key_penalty,
+                              use_backgrounds=not args.disable_backgrounds,
+                              rand_region=args.rand_region)
+            venv = VecExtractDictObs(venv, "rgb")
+        
         normalize_rew = hyperparameters.get('normalize_rew', True)
         if normalize_rew:
             venv = VecNormalize(venv, ob=False) # normalizing returns, but not
