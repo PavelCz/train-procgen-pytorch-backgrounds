@@ -79,6 +79,8 @@ if __name__=='__main__':
     set_global_seeds(seed)
     set_global_log_levels(log_level)
 
+    setup_start_time = time.time()
+
     if args.start_level == start_level_val:
         raise ValueError("Seeds for training and validation envs are equal.")
 
@@ -316,5 +318,22 @@ if __name__=='__main__':
     ##############
     ## TRAINING ##
     ##############
+    training_start_time = time.time()
+    setup_duration = training_start_time - setup_start_time
+    print(f'Setup completed in {setup_duration:.2f}s')
     print('START TRAINING...')
     agent.train(num_timesteps)
+
+    training_end_time = time.time()
+    training_duration = training_end_time - training_start_time
+    total_duration = training_end_time - setup_start_time
+    throughput = num_timesteps / training_duration
+
+    print('\n' + '='*50)
+    print('TIMING SUMMARY')
+    print('='*50)
+    print(f'Setup time:      {setup_duration:.2f}s')
+    print(f'Training time:   {training_duration:.2f}s ({training_duration/3600:.2f}h)')
+    print(f'Total time:      {total_duration:.2f}s ({total_duration/3600:.2f}h)')
+    print(f'Throughput:      {throughput:.0f} timesteps/s')
+    print('='*50)
