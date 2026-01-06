@@ -32,10 +32,12 @@ class PPO(BaseAgent):
                  use_gae=True,
                  log_interval=1000000,
                  num_validation_episodes=1024,
+                 create_env_valid_fn=None,
                  **kwargs):
 
         super(PPO, self).__init__(env, policy, logger, storage, device,
                                   n_checkpoints, env_valid, storage_valid)
+        self.create_env_valid_fn = create_env_valid_fn
 
         self.n_steps = n_steps
         self.n_envs = n_envs
@@ -162,6 +164,14 @@ class PPO(BaseAgent):
             #valid
             if self.env_valid is not None and self.t > self.next_log_timestep:
                 self.next_log_timestep += self.log_interval
+
+                # Re-create eval env if factory provided
+                if self.create_env_valid_fn is not None:
+                    self.env_valid.close()
+                    self.env_valid = self.create_env_valid_fn()
+                    obs_v = self.env_valid.reset()
+                    hidden_state_v = np.zeros((self.n_envs, self.storage.hidden_state_size))
+                    done_v = np.zeros(self.n_envs)
 
                 # Run validation episodes.
                 num_episodes = 0

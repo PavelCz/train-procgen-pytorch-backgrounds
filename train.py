@@ -65,6 +65,10 @@ if __name__=='__main__':
     #multi threading
     parser.add_argument('--num_threads', type=int, default=8)
     parser.add_argument('--debug', action="store_true")
+    
+    # Eval env recreation
+    parser.add_argument('--recreate_eval_env', type=str, default='auto', choices=['true', 'false', 'auto'],
+                        help='Recreate eval env before each validation run. auto=true when using level_seeds_file, false otherwise')
 
     args = parser.parse_args()
     exp_name = args.exp_name
@@ -309,12 +313,22 @@ if __name__=='__main__':
         from agents.ppo import PPO as AGENT
     else:
         raise NotImplementedError
+    
+    # Determine if we should recreate eval env
+    if args.recreate_eval_env == 'auto':
+        recreate_eval_env = args.level_seeds_file is not None
+    else:
+        recreate_eval_env = args.recreate_eval_env == 'true'
+    
+    create_env_valid_fn = (lambda: create_venv(args, hyperparameters, is_valid=True)) if recreate_eval_env else None
+    
     agent = AGENT(env, policy, logger, storage, device,
                   num_checkpoints,
                   env_valid=env_valid, 
                   storage_valid=storage_valid,  
                   log_interval=args.log_interval,
                   num_validation_episodes=num_validation_episodes,
+                  create_env_valid_fn=create_env_valid_fn,
                   **hyperparameters)
     if args.model_file is not None:
         print("Loading agent from %s" % args.model_file)
